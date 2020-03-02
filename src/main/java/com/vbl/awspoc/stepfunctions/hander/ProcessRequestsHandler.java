@@ -7,13 +7,13 @@ public class ProcessRequestsHandler {
 
     public void handleRequest(DownloadRequest downloadRequest, Context context) {
         var logger = context.getLogger();
-        logger.log("Start processing request with params " + downloadRequest.getParameters());
+        logger.log("Start processing request with params " + downloadRequest.getParameters1());
         try {
-            Thread.sleep(5000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        logger.log("Finished processing requst with params " + downloadRequest.getParameters());
+        logger.log("Finished processing request with params " + downloadRequest.getParameters1());
     }
 
 }
