@@ -7,7 +7,6 @@ import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vbl.awspoc.stepfunctions.request.DownloadRequest;
-import com.vbl.awspoc.stepfunctions.request.DownloadRequestHolder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,13 +47,10 @@ public class RequestPublisher implements RequestStreamHandler {
             requests.addAll(receivedRequests);
             isEmpty = receivedRequests.isEmpty();
         }
-        var requestHolder = new DownloadRequestHolder();
-        requestHolder.setProcessedRecords(10);
         if (requests.isEmpty()) {
-            requestHolder.setRequests("No data");
+            mapper.writeValue(outputStream, "No data");
         } else {
-            requestHolder.setRequests(requests);
+            mapper.writeValue(outputStream, requests);
         }
-        mapper.writeValue(outputStream, requests);
     }
 }

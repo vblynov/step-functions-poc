@@ -1,0 +1,85 @@
+{
+  "Comment": "A simple workflow to explore AWS Step Functions",
+  "StartAt": "Create Download Requests",
+  "States": {
+    "Create Download Requests": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:085393336907:function:CreateRequest:$LATEST",
+        "Payload": {
+          "requestUrl": "endpoint1.url.com",
+          "requestNumber": 20
+        }
+      },
+      "Next": "Read Requests From Buffer"
+    },
+    "Read Requests From Buffer": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:085393336907:function:PublishRequests:$LATEST"
+      },
+      "Next": "Are there requests to process?"
+    },
+    "Are there requests to process?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$",
+          "StringEquals": "No data",
+          "Next": "Finish"
+        }
+      ],
+      "Default": "Process requests"
+    },
+    "Process requests": {
+      "Type": "Map",
+      "MaxConcurrency": 5,
+      "ItemsPath": "$",
+      "Iterator": {
+        "StartAt": "ProcessSingleDownload",
+        "States": {
+          "ProcessSingleDownload": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:us-east-1:085393336907:function:ProcessRequest:$LATEST",
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "com.vbl.awspoc.stepfunctions.exceptions.RequestProcessorException"
+                ],
+                "IntervalSeconds": 5,
+                "BackoffRate": 2,
+                "MaxAttempts": 3
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": [
+                  "com.vbl.awspoc.stepfunctions.exceptions.RequestProcessorException"
+                ],
+                "ResultPath": null,
+                "Next": "Send request to DLQ"
+              }
+            ],
+            "End": true
+          },
+          "Send request to DLQ": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::sqs:sendMessage",
+            "Parameters": {
+              "QueueUrl": "https://sqs.us-east-1.amazonaws.com/085393336907/requests-dlq",
+              "MessageBody.$": "$"
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Read Requests From Buffer"
+    },
+    "Finish": {
+      "Type": "Succeed"
+    }
+  }
+}
